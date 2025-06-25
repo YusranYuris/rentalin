@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentalin_project/perental_pages/editProduk_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data'; // Import untuk Uint8List
 import 'dart:convert';
@@ -29,20 +30,20 @@ class Product {
     this.namaRental,
   });
 
-  factory Product.fromJson(Map<String, dynamic> json, String? rentalName) {
-    return Product(
-      idProduk: json['id_produk'],
-      idUser: json['id_user'],
-      idRental: json['id_rental'],
-      hargaProduk: json['harga_produk'],
-      deskripsiProduk: json['deskripsi_produk'],
-      gambarProduk: null,
-      transaksi: json['transaksi'],
-      statusProduk: json['status_produk'],
-      namaKendaraan: json['nama_kendaraan'],
-      namaRental: rentalName,
-    );
-  }
+  // factory Product.fromJson(Map<String, dynamic> json, String? rentalName) {
+  //   return Product(
+  //     idProduk: json['id_produk'],
+  //     idUser: json['id_user'],
+  //     idRental: json['id_rental'],
+  //     hargaProduk: json['harga_produk'],
+  //     deskripsiProduk: json['deskripsi_produk'],
+  //     gambarProduk: null,
+  //     transaksi: json['transaksi'],
+  //     statusProduk: json['status_produk'],
+  //     namaKendaraan: json['nama_kendaraan'],
+  //     namaRental: rentalName,
+  //   );
+  // }
 }
 
 class ProdukAndaPage extends StatefulWidget {
@@ -59,6 +60,12 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
   void initState() {
     super.initState();
     _productsFuture = _fetchProdukData();
+  }
+
+  void _refreshProducts() { // Mengubah menjadi void dan tidak async
+    setState(() {
+      _productsFuture = _fetchProdukData();
+    });
   }
 
   Future<List<Product>> _fetchProdukData() async {
@@ -190,12 +197,15 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _stokRental(
+                          context: context,
+                          product: product,
                           gambarProduk: product.gambarProduk,
                           namaRental: product.namaRental ?? 'Nama Rental Tidak Diketahui',
                           motor: product.namaKendaraan,
                           deskripsi: product.deskripsiProduk,
                           statusProduk: product.statusProduk,
                           harga: product.hargaProduk.toString(),
+                          onProductUpdated: _refreshProducts
                         ),
                       );
                     },
@@ -212,12 +222,16 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
 
 // Widget _stokRental diubah untuk menerima Uint8List untuk gambar
 Widget _stokRental(
-    {Uint8List? gambarProduk,
+    {required BuildContext context,
+    required Product product,
+    Uint8List? gambarProduk,
     required String namaRental,
     required String motor,
     required String deskripsi,
     required String statusProduk,
-    required String harga}) {
+    required String harga,
+    VoidCallback? onProductUpdated
+    }) {
   return Container(
     width: double.infinity,
     height: 289,
@@ -248,7 +262,7 @@ Widget _stokRental(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                namaRental,
+                motor,
                 style: const TextStyle(
                     fontFamily: "Sora",
                     fontWeight: FontWeight.w600,
@@ -259,20 +273,14 @@ Widget _stokRental(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Bagian rating dihapus sesuai permintaan
                   Row(
                     children: [
-                      const Icon(
-                        Icons.price_change,
-                        color: Colors.black,
-                        size: 13,
-                      ),
                       Text(
                         "Rp$harga/hari",
                         style: const TextStyle(
                             fontFamily: "Sora",
                             fontWeight: FontWeight.w400,
-                            fontSize: 8,
+                            fontSize: 12,
                             color: Colors.black),
                       )
                     ],
@@ -286,48 +294,59 @@ Widget _stokRental(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    motor,
-                    style: const TextStyle(
-                        fontFamily: "Sora",
-                        fontWeight: FontWeight.w300,
-                        fontSize: 8,
-                        color: Colors.black),
-                  ),
-                  Text(
-                    deskripsi, // Ini akan menampilkan deskripsi produk
-                    style: const TextStyle(
-                        fontFamily: "Sora",
-                        fontWeight: FontWeight.w300,
-                        fontSize: 8,
-                        color: Colors.black),
-                  ),
-                  Text(
-                    statusProduk, // Ini akan menampilkan status produk
-                    style: const TextStyle(
-                        fontFamily: "Sora",
-                        fontWeight: FontWeight.w300,
-                        fontSize: 8,
-                        color: Colors.black),
+                  Container(
+                    width: 190,
+                    height: 44,
+                    child: Text(
+                      deskripsi,
+                      maxLines: 3,
+                      style: const TextStyle(
+                          fontFamily: "Sora",
+                          fontWeight: FontWeight.w300,
+                          fontSize: 10,
+                          color: Colors.black),
+                    ),
                   ),
                 ],
               ),
               const Spacer(), // Menggunakan Spacer untuk mendorong tombol ke kanan
-              Container(
-                width: 49,
-                height: 23,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(1.64),
-                  color: const Color(0xFF001F3F),
-                ),
-                child: const Text(
-                  "Edit",
-                  style: TextStyle(
-                    fontFamily: "Sora",
-                    fontWeight: FontWeight.w600,
-                    fontSize: 10,
-                    color: Colors.white,
+              GestureDetector(
+                onTap: () async {
+                  final bool? result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProdukPage(product: product)
+                    ),
+                  );
+
+                  if (result == true) {
+                    onProductUpdated?.call(); // Memanggil callback jika produk diperbarui
+                  }
+                },
+                child: Container(
+                  width: 49,
+                  height: 23,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(1.64),
+                    color: const Color(0xFF001F3F),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        spreadRadius: 2,
+                        blurRadius: 2,
+                        offset: const Offset(0, 1), // Perubahan offset untuk bayangan
+                      ),
+                    ]
+                  ),
+                  child: const Text(
+                    "Edit",
+                    style: TextStyle(
+                      fontFamily: "Sora",
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -340,6 +359,14 @@ Widget _stokRental(
                   borderRadius: BorderRadius.circular(1.64),
                   color: const Color(0xFFFFFFFF),
                   border: Border.all(color: const Color(0xFF00BCD4), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 2,
+                      offset: const Offset(0, 1), // Perubahan offset untuk bayangan
+                    ),
+                  ]
                 ),
                 child: Text(
                   statusProduk, // Menampilkan status produk
