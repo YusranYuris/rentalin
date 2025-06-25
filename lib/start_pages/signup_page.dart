@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rentalin_project/penyewa_pages/cari_page.dart';
+import 'package:rentalin_project/components/main_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -65,10 +65,6 @@ class _SignUpPageState extends State<SignUpPage> {
         'password': password, // atau kosongkan, karena sudah disimpan di auth
       });
 
-      if (response.error != null) {
-        throw response.error!;
-      }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Pendaftaran berhasil"))
       );
@@ -77,7 +73,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
       Navigator.pushAndRemoveUntil(
         context, 
-        MaterialPageRoute(builder: (context) => CariPage()), 
+        MaterialPageRoute(builder: (context) => MainPage()), 
         (Route<dynamic> route) => false
       );
     }

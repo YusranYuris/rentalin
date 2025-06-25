@@ -1,5 +1,7 @@
 import 'package:rentalin_project/penyewa_pages/mulaiRental_page.dart';
 import 'package:flutter/material.dart';
+import 'package:rentalin_project/perental_pages/homePerental_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
@@ -9,6 +11,86 @@ class ProfilPage extends StatefulWidget {
 }
 
 class _ProfilPageState extends State<ProfilPage> {
+  final supabase = Supabase.instance.client;
+
+  Future<bool> _cekStatusRental() async {
+    try {
+      // Dapatkan ID user yang sedang login dari Supabase Auth
+      final user = supabase.auth.currentUser;
+      
+      if (user == null) {
+        print('User not authenticated');
+        return false;
+      }
+      
+      // Query ke tabel rental untuk cek apakah user sudah terdaftar
+      final response = await supabase
+          .from('rental')
+          .select('id_user')
+          .eq('id_user', user.id);
+      
+      // Jika ada data, berarti user sudah terdaftar sebagai rental
+      return response.isNotEmpty;
+      
+    } catch (e) {
+      print('Error checking rental status: $e');
+      return false;
+    }
+  }
+
+  void _handleMulaiRental() async {
+    // Tampilkan loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF00BCD4),
+          ),
+        );
+      },
+    );
+
+    try {
+      // Cek status rental user
+      bool isRentalExist = await _cekStatusRental();
+      
+      // Tutup loading dialog
+      Navigator.of(context).pop();
+      
+      if (isRentalExist) {
+        // Jika sudah terdaftar sebagai rental, ke HomePerentalPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomePerentalPage()
+          )
+        );
+      } else {
+        // Jika belum terdaftar, ke DaftarRentalPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MulaiRentalPage()
+          )
+        );
+      }
+    } catch (e) {
+      // Tutup loading dialog jika ada error
+      Navigator.of(context).pop();
+      
+      // Tampilkan error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan. Silakan coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -260,12 +342,7 @@ class _ProfilPageState extends State<ProfilPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => MulaiRentalPage())
-                      );
-                    },
+                    onTap: _handleMulaiRental,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(5),
