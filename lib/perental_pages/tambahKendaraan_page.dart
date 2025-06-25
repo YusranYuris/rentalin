@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:rentalin_project/perental_pages/homePerental_page.dart';
+import 'dart:typed_data'; // Untuk Uint8List
+import 'dart:math'; 
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TambahKendaraanPage extends StatefulWidget{
   const TambahKendaraanPage({super.key});
@@ -15,6 +18,21 @@ class _TambahKendaraanPageState extends State<TambahKendaraanPage> {
   final TextEditingController _namaKendaraanController = TextEditingController();
   final TextEditingController _hargaProdukController = TextEditingController();
   final TextEditingController _deskripsiProdukController = TextEditingController();
+  bool _isLoading = false;
+
+  String generateUuid() {
+    var random = Random();
+    var values = List<int>.generate(16, (_) => random.nextInt(256));
+    
+    values[6] = (values[6] & 0x0f) | 0x40; // Version 4
+    values[8] = (values[8] & 0x3f) | 0x80; // Variant bits
+    
+    return '${values.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+           '${values.sublist(4, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+           '${values.sublist(6, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+           '${values.sublist(8, 10).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+           '${values.sublist(10, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
+  }
 
   bool get _formIsValid {
     return _gambarKendaraan != null &&
@@ -50,11 +68,94 @@ class _TambahKendaraanPageState extends State<TambahKendaraanPage> {
     }
   }
 
+  Future<void> _tambahProduk() async {
+    if (!_formIsValid) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User tidak terautentikasi');
+      }
+
+      // Ambil id_rental dari tabel rental berdasarkan id_user
+      final rentalData = await Supabase.instance.client
+          .from('rental')
+          .select('id_rental')
+          .eq('id_user', currentUser.id)
+          .single();
+
+      if (rentalData == null || rentalData.isEmpty) {
+        throw Exception('User belum terdaftar sebagai penyedia rental.');
+      }
+
+      final idRental = rentalData['id_rental'];
+      final idProduk = generateUuid();
+      final namaKendaraan = _namaKendaraanController.text.trim();
+      final hargaProduk = int.parse(_hargaProdukController.text.trim());
+      final deskripsiProduk = _deskripsiProdukController.text.trim();
+      
+      // Baca gambar sebagai bytes
+      Uint8List? gambarBytes;
+      if (_gambarKendaraan != null) {
+        gambarBytes = await _gambarKendaraan!.readAsBytes();
+      }
+
+      await Supabase.instance.client.from('produk').insert({
+        'id_produk': idProduk,
+        'id_user': currentUser.id,
+        'id_rental': idRental,
+        'harga_produk': hargaProduk,
+        'deskripsi_produk': deskripsiProduk,
+        'gambar_produk': gambarBytes, // Menggunakan byte array
+        'transaksi': 0, // Default 0 sesuai permintaan
+        'status_produk': 'Tersedia', // Default "Tersedia" sesuai permintaan
+        'nama_kendaraan': namaKendaraan,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Produk berhasil ditambahkan!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomePerentalPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menambahkan produk: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _namaKendaraanController.removeListener(_updateState);
+    _hargaProdukController.removeListener(_updateState);
+    _deskripsiProdukController.removeListener(_updateState);
     _namaKendaraanController.dispose();
     _hargaProdukController.dispose();
     _deskripsiProdukController.dispose();
+    super.dispose();
   }
 
   @override
@@ -374,13 +475,7 @@ class _TambahKendaraanPageState extends State<TambahKendaraanPage> {
 
                 // Tombol Tambah
                 GestureDetector(
-                  onTap: _formIsValid ? (){
-                    Navigator.pushAndRemoveUntil(
-                      context, 
-                      MaterialPageRoute(builder: (context) => HomePerentalPage()),  
-                      (Route<dynamic> route) => false
-                    );
-                  } : null,
+                  onTap: _isLoading ? null : (_formIsValid ? _tambahProduk : null),
                   child: Container(
                     width: MediaQuery.of(context).size.width,
                     height: 56,

@@ -37,7 +37,7 @@ class _HomePerentalPageState extends State<HomePerentalPage> {
 
       // Ambil data user
       final userResponse = await Supabase.instance.client
-          .from('user')
+          .from('rental')
           .select('nama_rental')
           .eq('id_user', currentUser.id)
           .single();
