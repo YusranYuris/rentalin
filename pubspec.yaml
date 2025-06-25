@@ -59,6 +59,7 @@ flutter:
     - assets/images/Google.png
     - assets/images/Facebook.png
     - assets/images/iqbal_rental.png
+    - assets/images/placeholder_qris.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentalin_project/penyewa_pages/pemesanan_page.dart';
 import 'package:rentalin_project/perental_pages/produkAnda_page.dart'; // Import Product model
 
 class DetailProdukPage extends StatefulWidget {
@@ -141,28 +142,39 @@ class _DetailProdukPageState extends State<DetailProdukPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              width: 363, // Tetap gunakan lebar fixed jika ini adalah lebar desain yang Anda inginkan
-                              height: 56,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF0F6D79),
-                                    Color(0xFF00BCD4),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                            GestureDetector(
+                              onTap: () {
+                                // Navigasi ke PemesananPage (sebelumnya PembayaranPage)
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PemesananPage(product: currentProduct),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 363, // Tetap gunakan lebar fixed jika ini adalah lebar desain yang Anda inginkan
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF0F6D79),
+                                      Color(0xFF00BCD4),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
                                 ),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  "Pesan Sekarang",
-                                  style: TextStyle(
-                                    fontFamily: "Sora",
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 20,
-                                    color: Colors.white,
+                                child: const Center(
+                                  child: Text(
+                                    "Pesan Sekarang",
+                                    style: TextStyle(
+                                      fontFamily: "Sora",
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 20,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
