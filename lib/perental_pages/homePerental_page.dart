@@ -51,7 +51,7 @@ class _HomePerentalPageState extends State<HomePerentalPage> {
 
       if (mounted) {
         setState(() {
-          userName = userResponse['nama_lengkap'] ?? 'Nama tidak ditemukan';
+          userName = userResponse['nama_rental'] ?? 'Nama tidak ditemukan';
           rentalLocation = rentalResponse['lokasi_rental'] ?? 'Lokasi tidak ditemukan';
           isLoading = false;
         });

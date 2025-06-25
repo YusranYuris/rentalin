@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data'; // Import untuk Uint8List
+import 'dart:convert';
 
 // Model data sederhana untuk produk
 class Product {
@@ -35,9 +36,7 @@ class Product {
       idRental: json['id_rental'],
       hargaProduk: json['harga_produk'],
       deskripsiProduk: json['deskripsi_produk'],
-      gambarProduk: json['gambar_produk'] != null
-          ? Uint8List.fromList(List<int>.from(json['gambar_produk']))
-          : null,
+      gambarProduk: null,
       transaksi: json['transaksi'],
       statusProduk: json['status_produk'],
       namaKendaraan: json['nama_kendaraan'],
@@ -66,24 +65,22 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
     try {
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
-        print('DEBUG: User not authenticated');
+        print('DEBUG ProdukAnda: User tidak terautentikasi.');
         throw Exception('User tidak terautentikasi');
       }
-      print('DEBUG: Current User ID: ${currentUser.id}');
+      print('DEBUG ProdukAnda: Current User ID: ${currentUser.id}');
 
-      // Ambil produk berdasarkan id_user yang sedang login
-      // Lakukan join dengan tabel rental untuk mendapatkan nama_rental
       final response = await Supabase.instance.client
           .from('produk')
-          .select('*, rental(nama_rental)') // Pilih semua kolom produk dan nama_rental dari tabel rental
+          .select('*, rental(nama_rental)')
           .eq('id_user', currentUser.id)
-          .order('nama_kendaraan', ascending: true); // Urutkan berdasarkan nama kendaraan
-      
-      print('DEBUG: Supabase Response: $response');
+          .order('nama_kendaraan', ascending: true);
 
-      if (response == null || response.isEmpty) {
-        print('DEBUG: No product data found for user ${currentUser.id}.');
-        return []; // Mengembalikan daftar kosong jika tidak ada data
+      print('DEBUG ProdukAnda: Raw Supabase Response: $response'); 
+
+      if (response.isEmpty) {
+        print('DEBUG ProdukAnda: Tidak ada data produk ditemukan untuk user ${currentUser.id}.');
+        return [];
       }
 
       List<Product> products = [];
@@ -92,15 +89,37 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
         if (item['rental'] != null && item['rental'] is Map) {
           rentalName = item['rental']['nama_rental'] as String?;
         }
-
+        
         Uint8List? gambarBytes;
-        if (item['gambar_produk'] != null) {
+        if (item['gambar_produk'] != null && item['gambar_produk'] is String) {
+          String hexString = item['gambar_produk'] as String;
+          if (hexString.startsWith('\\x')) {
+            hexString = hexString.substring(2); // Hapus prefix \x
+          }
+
           try {
-            // Supabase BYTEA biasanya berupa array integer
-            gambarBytes = Uint8List.fromList(List<int>.from(item['gambar_produk']));
+            // Langkah 1: Konversi string heksadesimal ke ASCII string
+            List<int> asciiCodeUnits = [];
+            for (int i = 0; i < hexString.length; i += 2) {
+              String hexPair = hexString.substring(i, i + 2);
+              int byte = int.parse(hexPair, radix: 16);
+              asciiCodeUnits.add(byte);
+            }
+            String rawListString = utf8.decode(asciiCodeUnits); // Ini akan menghasilkan string seperti "[255,216,255,...]"
+
+            // Langkah 2: Parse rawListString menjadi List<int>
+            if (rawListString.startsWith('[') && rawListString.endsWith(']')) {
+              rawListString = rawListString.substring(1, rawListString.length - 1); // Hapus [ dan ]
+            }
+            List<int> byteList = rawListString.split(',')
+                .map((s) => int.tryParse(s.trim()) ?? 0) // Parse setiap angka, default ke 0 jika gagal
+                .toList();
+            
+            gambarBytes = Uint8List.fromList(byteList);
+
           } catch (e) {
-            print('DEBUG: Error converting image bytes: $e');
-            gambarBytes = null; // Set null jika konversi gagal
+            print('DEBUG ProdukAnda: Error converting complex image string: $e');
+            gambarBytes = null;
           }
         }
 
@@ -110,18 +129,19 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
           idRental: item['id_rental'],
           hargaProduk: item['harga_produk'],
           deskripsiProduk: item['deskripsi_produk'],
-          gambarProduk: gambarBytes, // Gunakan gambarBytes yang sudah diproses
+          gambarProduk: gambarBytes,
           transaksi: item['transaksi'],
           statusProduk: item['status_produk'],
           namaKendaraan: item['nama_kendaraan'],
           namaRental: rentalName,
         ));
       }
-      print('DEBUG: Fetched ${products.length} products.');
+      print('DEBUG ProdukAnda: Fetched ${products.length} products.'); 
       return products;
     } catch (e) {
-      print('DEBUG: Error fetching products: $e');
-      rethrow;
+      print('DEBUG ProdukAnda: Error fetching products: $e'); 
+      // Re-throw exception agar FutureBuilder dapat menangkap dan menampilkan error
+      rethrow; 
     }
   }
 
@@ -173,8 +193,8 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
                           gambarProduk: product.gambarProduk,
                           namaRental: product.namaRental ?? 'Nama Rental Tidak Diketahui',
                           motor: product.namaKendaraan,
-                          jarak: product.deskripsiProduk, // Menggunakan deskripsi sebagai jarak untuk sementara
-                          terdekat: product.statusProduk, // Menggunakan status sebagai terdekat untuk sementara
+                          deskripsi: product.deskripsiProduk,
+                          statusProduk: product.statusProduk,
                           harga: product.hargaProduk.toString(),
                         ),
                       );
@@ -195,8 +215,8 @@ Widget _stokRental(
     {Uint8List? gambarProduk,
     required String namaRental,
     required String motor,
-    required String jarak,
-    required String terdekat,
+    required String deskripsi,
+    required String statusProduk,
     required String harga}) {
   return Container(
     width: double.infinity,
@@ -239,6 +259,7 @@ Widget _stokRental(
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Bagian rating dihapus sesuai permintaan
                   Row(
                     children: [
                       const Icon(
@@ -274,7 +295,7 @@ Widget _stokRental(
                         color: Colors.black),
                   ),
                   Text(
-                    jarak, // Ini akan menampilkan deskripsi produk
+                    deskripsi, // Ini akan menampilkan deskripsi produk
                     style: const TextStyle(
                         fontFamily: "Sora",
                         fontWeight: FontWeight.w300,
@@ -282,7 +303,7 @@ Widget _stokRental(
                         color: Colors.black),
                   ),
                   Text(
-                    terdekat, // Ini akan menampilkan status produk
+                    statusProduk, // Ini akan menampilkan status produk
                     style: const TextStyle(
                         fontFamily: "Sora",
                         fontWeight: FontWeight.w300,
@@ -303,10 +324,11 @@ Widget _stokRental(
                 child: const Text(
                   "Edit",
                   style: TextStyle(
-                      fontFamily: "Sora",
-                      fontWeight: FontWeight.w600,
-                      fontSize: 10,
-                      color: Colors.white),
+                    fontFamily: "Sora",
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 5),
@@ -315,11 +337,12 @@ Widget _stokRental(
                 height: 23,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(1.64),
-                    color: const Color(0xFFFFFFFF),
-                    border: Border.all(color: const Color(0xFF00BCD4), width: 1.2)),
+                  borderRadius: BorderRadius.circular(1.64),
+                  color: const Color(0xFFFFFFFF),
+                  border: Border.all(color: const Color(0xFF00BCD4), width: 1.2),
+                ),
                 child: Text(
-                  terdekat, // Menampilkan status produk
+                  statusProduk, // Menampilkan status produk
                   style: const TextStyle(
                       fontFamily: "Sora",
                       fontWeight: FontWeight.w600,
