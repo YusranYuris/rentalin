@@ -3,6 +3,7 @@ import 'package:rentalin_project/perental_pages/laporanPerentalan_page.dart';
 import 'package:rentalin_project/perental_pages/produkAnda_page.dart';
 import 'package:rentalin_project/perental_pages/tambahKendaraan_page.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomePerentalPage extends StatefulWidget{
   const HomePerentalPage({super.key});
@@ -18,6 +19,54 @@ class _HomePerentalPageState extends State<HomePerentalPage> {
   ];
 
   int currentPage = 0;
+
+  String userName = "Loading...";
+  String rentalLocation = "Loading...";
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) return;
+
+      // Ambil data user
+      final userResponse = await Supabase.instance.client
+          .from('user')
+          .select('nama_rental')
+          .eq('id_user', currentUser.id)
+          .single();
+
+      // Ambil data rental
+      final rentalResponse = await Supabase.instance.client
+          .from('rental')
+          .select('lokasi_rental')
+          .eq('id_user', currentUser.id)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          userName = userResponse['nama_lengkap'] ?? 'Nama tidak ditemukan';
+          rentalLocation = rentalResponse['lokasi_rental'] ?? 'Lokasi tidak ditemukan';
+          isLoading = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          userName = 'Error loading name';
+          rentalLocation = 'Error loading location';
+          isLoading = false;
+        });
+      }
+      print('Error loading user data: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +104,7 @@ class _HomePerentalPageState extends State<HomePerentalPage> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      "Muhammad Yusran",
+                      isLoading ? "Loading..." : userName,
                       style: TextStyle(
                         fontFamily: "Sora",
                         fontWeight: FontWeight.w700,
@@ -64,7 +113,7 @@ class _HomePerentalPageState extends State<HomePerentalPage> {
                       ),
                     ),
                     Text(
-                      "ID: 187231054",
+                      isLoading ? "Loading..." : rentalLocation,
                       style: TextStyle(
                         fontFamily: "Sora",
                         fontWeight: FontWeight.w300,
