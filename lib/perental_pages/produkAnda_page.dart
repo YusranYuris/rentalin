@@ -16,6 +16,7 @@ class Product {
   final String statusProduk;
   final String namaKendaraan;
   final String? namaRental; // Tambahkan namaRental
+  final String? lokasiRental;
 
   Product({
     required this.idProduk,
@@ -28,6 +29,7 @@ class Product {
     required this.statusProduk,
     required this.namaKendaraan,
     this.namaRental,
+    this.lokasiRental
   });
 
   // factory Product.fromJson(Map<String, dynamic> json, String? rentalName) {
@@ -79,7 +81,7 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
 
       final response = await Supabase.instance.client
           .from('produk')
-          .select('*, rental(nama_rental)')
+          .select('*, rental(nama_rental, lokasi_rental)')
           .eq('id_user', currentUser.id)
           .order('nama_kendaraan', ascending: true);
 
@@ -93,8 +95,10 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
       List<Product> products = [];
       for (var item in response) {
         String? rentalName;
+        String? lokasiRental;
         if (item['rental'] != null && item['rental'] is Map) {
           rentalName = item['rental']['nama_rental'] as String?;
+          lokasiRental = item['rental']['lokasi_rental'] as String?;
         }
         
         Uint8List? gambarBytes;
@@ -141,6 +145,7 @@ class _ProdukAndaPageState extends State<ProdukAndaPage> {
           statusProduk: item['status_produk'],
           namaKendaraan: item['nama_kendaraan'],
           namaRental: rentalName,
+          lokasiRental: lokasiRental
         ));
       }
       print('DEBUG ProdukAnda: Fetched ${products.length} products.'); 
