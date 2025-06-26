@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:rentalin_project/penyewa_pages/detailProduk_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
-import 'dart:convert'; // Import untuk utf8.decode
+import 'dart:convert'; 
+import 'package:intl/intl.dart';
 
 // Import Product model dari produkAnda_page.dart
 // PASTIKAN MODEL INI SAMA DENGAN YANG ADA DI PRODUKANDA_PAGE.DART
@@ -24,6 +25,12 @@ class OtherRentalProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'id',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+    final String formattedHarga = formatter.format(product.hargaProduk);
     return GestureDetector(
       onTap: () {
         // Navigasi ke halaman DetailProdukPage dan teruskan objek produk
@@ -123,7 +130,7 @@ class OtherRentalProductCard extends StatelessWidget {
                     ],
                   ), // Spasi antara nama rental dan harga
                   Text(
-                    "Rp${product.hargaProduk}/hari",
+                    "$formattedHarga/hari",
                     style: const TextStyle(
                       fontFamily: 'Sora',
                       fontWeight: FontWeight.w700,

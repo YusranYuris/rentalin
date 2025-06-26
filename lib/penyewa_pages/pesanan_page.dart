@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data'; // Untuk Uint8List
 import 'dart:convert'; // Untuk utf8.decode
+import 'package:intl/intl.dart';
 
 // --- Model Data Baru untuk Item Pesanan ---
 class OrderItem {
@@ -93,6 +94,14 @@ class OrderItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'id', // Untuk format Indonesia (misal: Rp10.000)
+      symbol: 'Rp',
+      decimalDigits: 0, // Tidak ada angka di belakang koma
+    );
+    final String formattedHarga = formatter.format(item.hargaProduk);
+
     return Column(
       children: [
         Container(
@@ -103,7 +112,7 @@ class OrderItemCard extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(8)), // Sudut membulat
             boxShadow: [ // Efek shadow
               BoxShadow(
-                color: Colors.grey,
+                color: Colors.grey, // <--- SEHARUSNYA TIDAK MERAH
                 spreadRadius: 1,
                 blurRadius: 3,
                 offset: Offset(0, 1),
@@ -265,7 +274,7 @@ class OrderItemCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "Rp${item.hargaProduk}",
+                          "$formattedHarga",
                           style: const TextStyle(
                             fontFamily: 'Sora',
                             fontWeight: FontWeight.w600,
@@ -347,26 +356,34 @@ class _PesananPageState extends State<PesananPage> {
         throw Exception('User tidak terautentikasi.');
       }
 
-      // Menggunakan dynamic untuk fleksibilitas PostgrestQueryBuilder
-      dynamic query = supabase
-          .from('pemesanan')
-          .select('*, produk(*, rental(*))') // Join produk dan rental
-          .eq('id_user', currentUser.id)
-          .order('tanggal_pemesanan', ascending: false);
+      // Mulai kueri, ambil semua pesanan untuk user saat ini
+      var query = supabase.from('pemesanan')
+          .select('*, produk(*, rental(*))') // Select dan Join
+          .eq('id_user', currentUser.id) // Filter id_user
+          .order('tanggal_pemesanan', ascending: false); // Urutkan
 
-      // Terapkan filter jika bukan "Semua Status"
-      if (_selectedFilter != "Semua Status") {
-        query = query.eq('status_pemesanan', _selectedFilter);
-      }
-
-      final response = await query;
-      print('DEBUG PesananPage: Raw Supabase Response: $response');
-
-      if (response.isEmpty) {
+      // Jalankan kueri dan dapatkan semua data yang cocok
+      // Kita tidak lagi menggunakan '.eq()' di sini untuk filter status
+      final List<Map<String, dynamic>>? allOrdersRaw = await query;
+      
+      // Periksa apakah data null atau kosong
+      if (allOrdersRaw == null || allOrdersRaw.isEmpty) {
+        print('DEBUG PesananPage: Raw Supabase Response (no data): $allOrdersRaw');
         return [];
       }
 
-      return response.map((data) => OrderItem.fromSupabase(data)).toList();
+      // Konversi data mentah menjadi List<OrderItem>
+      List<OrderItem> allOrders = allOrdersRaw.map((data) => OrderItem.fromSupabase(data)).toList();
+      
+      print('DEBUG PesananPage: Raw Supabase Response (all): $allOrdersRaw');
+
+      // Lakukan filter berdasarkan status secara lokal di Dart
+      if (_selectedFilter != "Semua Status") {
+        allOrders = allOrders.where((order) => order.statusPemesanan == _selectedFilter).toList();
+        print('DEBUG PesananPage: Filtered orders by $_selectedFilter: ${allOrders.length} items');
+      }
+
+      return allOrders;
     } catch (e) {
       print('DEBUG PesananPage: Error fetching orders: $e');
       rethrow;

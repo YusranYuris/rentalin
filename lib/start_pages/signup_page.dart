@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rentalin_project/components/main_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart'; // Import for DateFormat
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -15,6 +16,20 @@ class _SignUpPageState extends State<SignUpPage> {
   final usernameController = TextEditingController();
   final passController = TextEditingController();
 
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Default 18 tahun lalu
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Pastikan minimal 18 tahun
+    );
+    if (picked != null) {
+      setState(() {
+        tglLahirController.text = DateFormat('yyyy-MM-dd').format(picked);
+      });
+    }
+  }
+
   Future<void> daftarPengguna() async {
     final nama_lengkap = namaController.text;
     final tglLahir = tglLahirController.text;
@@ -28,7 +43,7 @@ class _SignUpPageState extends State<SignUpPage> {
     // Validasi Input
     if([nama_lengkap, tglLahir, noHp, email, username, password].any((e) => e.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(
+        const SnackBar(content: Text(
           "Semua field harus diisi"
         ))
       );
@@ -37,7 +52,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if(password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(
+        const SnackBar(content: Text(
           "Password minimal 6 karakter"
         ))
       );
@@ -55,52 +70,71 @@ class _SignUpPageState extends State<SignUpPage> {
       // Simpan data tambahan ke tabel "user"
       final userId = authResponse.user!.id;
 
-      final response = await Supabase.instance.client.from('user').insert({
+      await Supabase.instance.client.from('user').insert({
         'id_user': userId,
         'nama_lengkap': nama_lengkap,
         'tanggal_lahir': tglLahirFormatted,
         'no_hp': noHp,
         'email': email,
         'username': username,
-        'password': password, // atau kosongkan, karena sudah disimpan di auth
+        'password': password,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Pendaftaran berhasil"))
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Pendaftaran berhasil"))
+        );
 
-      await Future.delayed(Duration(seconds: 1));
+        await Future.delayed(const Duration(seconds: 1));
 
-      Navigator.pushAndRemoveUntil(
-        context, 
-        MaterialPageRoute(builder: (context) => MainPage()), 
-        (Route<dynamic> route) => false
-      );
+        Navigator.pushAndRemoveUntil(
+          context, 
+          MaterialPageRoute(builder: (context) => const MainPage()), 
+          (Route<dynamic> route) => false
+        );
+      }
     }
-    } catch (e) {
+    } on AuthException catch (e) { 
       String errorMessage = "Gagal Daftar";
-      if (e is AuthException && e.message.contains('over_email_send_rate_limit')) {
+      if (e.message.contains('over_email_send_rate_limit')) {
         errorMessage = "Anda mencoba mendaftar terlalu sering. Silakan tunggu sebentar dan coba lagi";
       } else {
-        errorMessage = "Gagal daftar: ${e.toString()}";
+        errorMessage = "Gagal daftar: ${e.message}"; 
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage))
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red) 
+        );
+      }
+    } catch (e) { // Tangkap generic Exception
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Gagal daftar: ${e.toString()}"), backgroundColor: Colors.red)
+        );
+      }
     }
   }
 
-
+  @override
+  void dispose() {
+    namaController.dispose();
+    tglLahirController.dispose();
+    noHpController.dispose();
+    emailController.dispose();
+    usernameController.dispose();
+    passController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Color(0xFFE5ECF0),
+          backgroundColor: const Color(0xFFE5ECF0), // Gunakan const
         ),
         body: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration( // Gunakan const
             color: Color(0XFFE5ECF0)
           ),
           child: Padding(
@@ -111,83 +145,75 @@ class _SignUpPageState extends State<SignUpPage> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          "Selesaikan Pendaftaran",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 27.47,
-                            fontWeight: FontWeight.bold
-                          ),
+                      Text(
+                        "Selesaikan Pendaftaran",
+                        style: const TextStyle( // Gunakan const
+                          color: Colors.black,
+                          fontSize: 27.47,
+                          fontWeight: FontWeight.bold
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10), // Gunakan const
               
                   // Kotak Nama Lengkap
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Nama Lengkap",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Nama Lengkap",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            controller: namaController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Nama lengkap pada bukti identitas",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "Nama lengkap pada bukti identitas",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // Hapus Container di dalamnya
+                          controller: namaController,
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79), // Ubah ke warna yang konsisten
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "Nama lengkap pada bukti identitas",
+                            hintStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "Nama lengkap pada bukti identitas",
+                            labelStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 300,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
                           "Pastikan nama Anda sesuai dengan nama pada bukti resmi identitas Anda",
-                          style: TextStyle(
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -196,71 +222,68 @@ class _SignUpPageState extends State<SignUpPage> {
                       )
                     ],
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
               
-                  // Kotak Tanggal Lahir
+                  // Kotak Tanggal Lahir (DIPERBAIKI UNTUK DATEPICKER)
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Tanggal Lahir",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Tanggal Lahir",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            controller: tglLahirController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Tanggal Lahir",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "Tanggal Lahir",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // <-- Ganti dengan TextField
+                          controller: tglLahirController,
+                          readOnly: true, // Membuat TextField tidak bisa diketik
+                          onTap: () => _selectDate(context), // Memanggil DatePicker saat diklik
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "YYYY-MM-DD", // Ubah hint text
+                            hintStyle: const TextStyle(
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "Tanggal Lahir",
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                            suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF6B8490)), // Icon kalender
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 350,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
                           "Untuk mendaftar, Anda harus berusia setidaknya 18 tahun. Orang lain tidak bisa melihat tanggal lahir Anda.",
-                          style: TextStyle(
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -269,71 +292,66 @@ class _SignUpPageState extends State<SignUpPage> {
                       )
                     ],
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
                         
                   // Kotak Nomor HP
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Nomor Handphone",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Nomor Handphone",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            controller: noHpController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Nomor HP",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "08XXXXXXXXXX",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // Hapus Container di dalamnya
+                          controller: noHpController,
+                          keyboardType: TextInputType.phone, // Tipe keyboard phone
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "Nomor HP",
+                            hintStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "08XXXXXXXXXX",
+                            labelStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 350,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
                           "Kami akan mengirimkan Kode OTP via Nomor HP ini.",
-                          style: TextStyle(
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -342,71 +360,66 @@ class _SignUpPageState extends State<SignUpPage> {
                       )
                     ],
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
               
                   // Kotak Email
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Email",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Email",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            controller: emailController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Email",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "example@xyz.com",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // Hapus Container di dalamnya
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress, // Tipe keyboard email
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "Email",
+                            hintStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "example@xyz.com",
+                            labelStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 350,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
                           "Pastikan menggunakan email utama Anda.",
-                          style: TextStyle(
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -415,72 +428,66 @@ class _SignUpPageState extends State<SignUpPage> {
                       )
                     ],
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
 
                   // Kotak Password
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Password",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Password",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            obscureText: true,
-                            controller: passController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Password",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "Password",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // Hapus Container di dalamnya
+                          obscureText: true,
+                          controller: passController,
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "Password",
+                            hintStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "Password",
+                            labelStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 350,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
-                          "Password Minimal",
-                          style: TextStyle(
+                          "Password minimal 6 karakter.", // Ubah teks ini
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -490,72 +497,65 @@ class _SignUpPageState extends State<SignUpPage> {
                     ],
                   ),
 
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
 
                   // Kotak Username
                   Row(
                     children: [
-                      Container(
-                        child: Text(
-                          textAlign: TextAlign.left,
-                          "Username",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500
-                          ),
+                      Text(
+                        "Username",
+                        style: const TextStyle( // Gunakan const
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          child: TextField(
-                            obscureText: true,
-                            controller: usernameController,
-                            decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0F6D79),
-                                  width: 1.5
-                                )
-                              ),
-                              hintText: "Username Anda",
-                              hintStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 16
-                              ),
-                              labelText: "Username",
-                              labelStyle: TextStyle(
-                                color: Color(0xFF6B8490),
-                                fontSize: 12
-                              ),
+                        child: TextField( // Hapus Container di dalamnya
+                          controller: usernameController,
+                          decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
                             ),
-                          )
-                        ),
-                      )
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide( // Gunakan const
+                                color: Color(0xFF0F6D79),
+                                width: 1.5
+                              )
+                            ),
+                            hintText: "Username Anda",
+                            hintStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 16
+                            ),
+                            labelText: "Username",
+                            labelStyle: const TextStyle( // Gunakan const
+                              color: Color(0xFF6B8490),
+                              fontSize: 12
+                            ),
+                          ),
+                        )
+                      ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8), // Gunakan const
                         
                   Row(
                     children: [
-                      Container(
-                        width: 350,
+                      Expanded( // Menggunakan Expanded untuk Text
                         child: Text(
                           "Buat Username yang mirip dengan nama asli Anda",
-                          style: TextStyle(
+                          style: const TextStyle( // Gunakan const
                             color: Color(0XFF6B8490),
                             fontSize: 12
                           ),
@@ -564,7 +564,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       )
                     ],
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15), // Gunakan const
               
                   GestureDetector(
                     onTap: daftarPengguna,
@@ -573,17 +573,17 @@ class _SignUpPageState extends State<SignUpPage> {
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
-                        color: Color(0xff0F6D79),
+                        color: const Color(0xff0F6D79), // Gunakan const
                         boxShadow: [
                           BoxShadow(
                             color: Colors.grey.withOpacity(0.5), 
                             spreadRadius: 5, 
                             blurRadius: 20, 
-                            
+                            offset: const Offset(0, 0), // Tambahkan offset
                           )
                         ]
                       ),
-                      child: Center(
+                      child: const Center( // Gunakan const
                         child: Text(
                           "Lanjutkan",
                           style: TextStyle(
@@ -601,5 +601,6 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
       );
+    
   }
 }

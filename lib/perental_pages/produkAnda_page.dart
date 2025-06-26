@@ -3,6 +3,7 @@ import 'package:rentalin_project/perental_pages/editProduk_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data'; // Import untuk Uint8List
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 // Model data sederhana untuk produk
 class Product {
@@ -237,6 +238,14 @@ Widget _stokRental(
     required String harga,
     VoidCallback? onProductUpdated
     }) {
+  
+  final NumberFormat formatter = NumberFormat.currency(
+    locale: 'id', // Opsional, untuk format Indonesia
+    symbol: 'Rp',
+    decimalDigits: 0, // Tidak ada angka di belakang koma
+  );
+  final String formattedHarga = formatter.format(int.parse(harga));
+
   return Container(
     width: double.infinity,
     height: 289,
@@ -281,7 +290,7 @@ Widget _stokRental(
                   Row(
                     children: [
                       Text(
-                        "Rp$harga/hari",
+                        "$formattedHarga/hari",
                         style: const TextStyle(
                             fontFamily: "Sora",
                             fontWeight: FontWeight.w400,

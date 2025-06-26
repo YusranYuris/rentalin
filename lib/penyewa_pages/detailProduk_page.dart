@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rentalin_project/penyewa_pages/pemesanan_page.dart';
 import 'package:rentalin_project/perental_pages/produkAnda_page.dart'; // Import Product model
+import 'package:intl/intl.dart';
 
 class DetailProdukPage extends StatefulWidget {
   final Product product;
@@ -15,6 +16,13 @@ class _DetailProdukPageState extends State<DetailProdukPage> {
   @override
   Widget build(BuildContext context) {
     final Product currentProduct = widget.product; // Mengakses objek produk
+
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'id',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+    final String formattedHarga = formatter.format(currentProduct.hargaProduk);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -71,7 +79,7 @@ class _DetailProdukPageState extends State<DetailProdukPage> {
                       children: [
                         // Harga Produk
                         Text(
-                          "Rp${currentProduct.hargaProduk}/hari",
+                          "$formattedHarga/hari",
                           style: const TextStyle(
                             fontFamily: "Sora",
                             fontWeight: FontWeight.w600,

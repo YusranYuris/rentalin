@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:rentalin_project/perental_pages/produkAnda_page.dart';
 import 'package:rentalin_project/penyewa_pages/pembayaran_page.dart'; // Import halaman pembayaran QRIS
 import 'package:rentalin_project/components/main_screen.dart'; // Untuk navigasi ke PesananPage
+import 'package:intl/intl.dart';
 
 class PemesananPage extends StatefulWidget {
   final Product product;
@@ -106,6 +107,13 @@ class _PemesananPageState extends State<PemesananPage> {
   @override
   Widget build(BuildContext context) {
     final Product product = widget.product;
+
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'id',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+    final String formattedHarga = formatter.format(product.hargaProduk);
 
     return Scaffold(
       appBar: AppBar(
@@ -289,7 +297,7 @@ class _PemesananPageState extends State<PemesananPage> {
                               ),
                             ),
                             Text(
-                              "Rp${product.hargaProduk}",
+                              "$formattedHarga",
                               style: const TextStyle(
                                 fontFamily: 'Sora',
                                 fontSize: 15,
@@ -312,7 +320,7 @@ class _PemesananPageState extends State<PemesananPage> {
                               ),
                             ),
                             Text(
-                              "Rp${product.hargaProduk}",
+                              "$formattedHarga",
                               style: const TextStyle(
                                 fontFamily: 'Sora',
                                 fontWeight: FontWeight.w700,

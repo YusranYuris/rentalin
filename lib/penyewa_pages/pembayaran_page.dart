@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:rentalin_project/components/main_screen.dart'; // Untuk navigasi ke PesananPage
+import 'package:intl/intl.dart';
 
 class PembayaranPage extends StatefulWidget { // Ubah menjadi StatefulWidget
   final String idPembayaran;
@@ -57,7 +58,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
         Navigator.of(context).popUntil((route) => route.isFirst); // Kembali ke root
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const MainPage(initialPageIndex: 2) // Navigasi ke PesananPage
+            builder: (context) => const MainPage(initialPageIndex: 1) // Navigasi ke PesananPage
           )
         );
       }
@@ -82,6 +83,14 @@ class _PembayaranPageState extends State<PembayaranPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'id',
+      symbol: 'Rp',
+      decimalDigits: 0,
+    );
+    final String formattedTotalPembayaran = formatter.format(widget.totalPembayaran);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -171,7 +180,7 @@ class _PembayaranPageState extends State<PembayaranPage> {
                               style: TextStyle(fontFamily: 'Sora', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black),
                             ),
                             Text(
-                              "Rp${widget.totalPembayaran}",
+                              "$formattedTotalPembayaran",
                               style: const TextStyle(fontFamily: 'Sora', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black),
                             ),
                           ],
